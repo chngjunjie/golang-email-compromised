@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>The bird encyclopedia</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <link href="/static/index.css" rel="stylesheet">
+</head>
+
+<body>
+   <h1></h1>
+
+  <!--
+    This section of the document specifies the table that will
+    be used to display the list of birds and their description
+   -->
+
+  <!--
+    This section contains the form, that will be used to hit the
+    `POST /bird` API that we will build in the next section
+   -->
+   <div class="wrapper fadeInDown">
+    <div id="formContent">
+      <!-- Tabs Titles -->
+      <h2 class="active"> Sign In </h2>
+      <h2 href="/signup" class="inactive underlineHover"><a href="/signup">Sign Up </a></h2>
+  
+      <!-- Icon -->
+      <div class="fadeIn first">
+        <!-- <img src="http://danielzawadzki.com/codepen/01/icon.svg" id="icon" alt="User Icon" /> -->
+      </div>
+  
+      <!-- Login Form -->
+      <form>
+        <input type="text" id="login" class="fadeIn second" name="login" placeholder="login" required>
+        <input type="password" id="password" class="fadeIn third" name="login" placeholder="password" required>
+        <input id="submit" class="fadeIn fourth" value="Log In">
+      </form>
+  
+      <!-- Remind Passowrd -->
+      <div id="formFooter">
+        <div class="underlineHover message" href="#">Welcome</div>
+      </div>
+  
+    </div>
+  </div>
+
+  <!--
+    Finally, the last section is the script that will
+    run on each page load to fetch the list of birds
+    and add them to our existing table
+   -->
+  <script>
+    $( document ).ready(function() {
+
+      $("#submit").click(function(){
+          let username = $("#login").val();
+          let password = $("#password").val();
+
+          $.ajax({
+            type: "POST",
+            url: "/login",
+            contentType: "application/json",
+            data: '{"username": "' + username + '", "password" : "' + password + '"}',
+            success: function(data){
+              console.log("Data ", data);
+              if ('access_token' in data)
+              {
+                localStorage.setItem("allen_chng_email_compromised_tokens", data["access_token"]);
+                window.location.href = "/home";
+              }
+            },
+            error: function(errMsg) {
+              console.log("Error ", errMsg);
+              if ('responseJSON' in errMsg)
+              {
+                console.log("Error ", errMsg['responseJSON']);
+                $(".message").html(errMsg['responseJSON'])
+              }
+            }
+          });
+      }); 
+    }); 
+  </script>
+</body>

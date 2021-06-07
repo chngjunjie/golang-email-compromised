@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>The bird encyclopedia</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <link href="/static/index.css" rel="stylesheet">
+</head>
+
+<body>
+   <h1></h1>
+
+  <!--
+    This section of the document specifies the table that will
+    be used to display the list of birds and their description
+   -->
+
+  <!--
+    This section contains the form, that will be used to hit the
+    `POST /bird` API that we will build in the next section
+   -->
+   <div class="wrapper fadeInDown">
+    <div id="formContent">
+      <!-- Tabs Titles -->
+      <h2 class="inactive underlineHover"><a href="/login">Sign In </a></h2>
+      <h2 class="active">Sign Up </h2>
+  
+      <!-- Icon -->
+      <div class="fadeIn first">
+        <!-- <img src="http://danielzawadzki.com/codepen/01/icon.svg" id="icon" alt="User Icon" /> -->
+      </div>
+  
+      <!-- Login Form -->
+      <form>
+        <input type="text" id="login" class="fadeIn second" name="login" placeholder="username" required>
+        <input type="password" id="password" class="fadeIn third" name="password" placeholder="password" required>
+        <input type="email" id="email" class="fadeIn third" name="email" placeholder="email" required>
+        <input id="submit" class="fadeIn fourth" value="Sign Up">
+      </form>
+  
+      <!-- Remind Passowrd -->
+      <div id="formFooter">
+        <div class="underlineHover message" href="#">Welcome</div>
+      </div>
+  
+    </div>
+  </div>
+
+  <!--
+    Finally, the last section is the script that will
+    run on each page load to fetch the list of birds
+    and add them to our existing table
+   -->
+  <script>
+    $( document ).ready(function() {
+        function isEmail(email) {
+            var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,6})+$/;
+            return regex.test(email);
+        }
+
+        $("#submit").click(function(){
+            let username = $("#login").val();
+            let password = $("#password").val();
+            let email = $("#email").val();
+            console.log(isEmail(email));
+
+            if (username != '' && password != '' && email != ''){
+                if (isEmail(email))
+                {
+                    $.ajax({
+                    type: "POST",
+                    url: "/signup",
+                    contentType: "application/json",
+                    data: '{"username": "' + username + '", "password" : "' + password + '", "email" : "' + email +'"}',
+                    success: function(data){
+                        console.log("Data ", data);
+                        window.location.href = "/login";
+                    },
+                    error: function(errMsg) {
+                        console.log("Error ", errMsg);
+                        if ('responseJSON' in errMsg)
+                        {
+                        console.log("Error ", errMsg['responseJSON']);
+                        $(".message").html(errMsg['responseJSON'])
+                        }
+                    }
+                    });
+                }
+                else 
+                {
+                    $(".message").html("Invalid Email Format.")
+                }
+            }
+            else 
+            {
+                $(".message").html("Please fill up all the required fields.")
+            }
+        }); 
+
+    });
+  </script>
+</body>
