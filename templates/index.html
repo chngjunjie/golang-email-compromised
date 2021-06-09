@@ -63,7 +63,6 @@
             contentType: "application/json",
             data: '{"username": "' + username + '", "password" : "' + password + '"}',
             success: function(data){
-              console.log("Data ", data);
               if ('access_token' in data)
               {
                 localStorage.setItem("allen_chng_email_compromised_tokens", data["access_token"]);

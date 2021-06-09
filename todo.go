@@ -1,13 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"reflect"
 	"time"
-
+	"strings"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq" // here
 	"golang.org/x/crypto/bcrypt"
@@ -67,77 +67,146 @@ func checkEmail(c *gin.Context) {
 		return
 	}
 
-	au, err := ExtractTokenMetadata(c.Request)
+	tokenAuth, err := ExtractTokenMetadata(c.Request)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	// Next, insert the username, along with the hashed password into the database
-	var email_id int
-
-	stmt, err := Db.Prepare("INSERT INTO compromised_emails(email, date_added, user_id) VALUES ($1,$2,$3) RETURNING email_id")
+	userId, err := FetchAuth(tokenAuth)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, "Prepare Query Error")
-		return
-	}
-	fmt.Println("stmt : ", stmt)
-
-	err = stmt.QueryRow(email.Email, time.Now(), au.UserID).Scan(&email_id)
-	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, "Run Query Error")
+		c.JSON(http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	fmt.Println(" email ", email.Email)
-
-	url := "https://haveibeenpwned.com/api/v3/breachedaccount/" + email.Email
-	reqest, err := http.NewRequest("GET", url, nil)
-	reqest.Header.Add("hibp-api-key", "61e71327fca3400ab0fe3670806828f3")
-
+	// Check agains Cache
+	result, err := myCache.Get(email.Email)
 	if err != nil {
-		panic(err)
+		// error
+		c.JSON(http.StatusUnprocessableEntity, "Cache Query Error")
+		return
 	}
 
-	resp, err := http.DefaultClient.Do(reqest)
-	fmt.Println(" resp ", resp)
-
-	content, err := ioutil.ReadAll(resp.Body)
-	respBody := string(content)
-	fmt.Println(" respBody ", respBody)
-	xt := reflect.TypeOf(respBody).Kind()
-	fmt.Printf("%T: %s\n", xt, xt)
-
-	b := []byte(respBody)
-	fmt.Println(b)
-
-	var m1 interface{}
-
-	json.Unmarshal(b, &m1)
-	switch v := m1.(type) {
-	case []interface{}:
-		for _, x := range v {
-			fmt.Println("this is b", x.(map[string]interface{})["Name"])
-		}
-	default:
-		fmt.Println("No type found")
+	if result != nil {
+		c.JSON(http.StatusCreated, string(result))
+		return
 	}
 
-	var ms = []*Domain{}
+	// Check if that any previous email exists in DB
+	emailExists := EmailExists(email.Email)
 
-	err = json.Unmarshal(b, &ms)
-	if err != nil {
-		panic(err)
-	}
-
-	for _, row := range ms {
-		if _, err = Db.Query("INSERT INTO domains(domain_name, email_id) VALUES ($1,$2)", row.DomainName, email_id); err != nil {
-			// If there is any issue with inserting into the database, return a 500 error
-			c.JSON(http.StatusUnprocessableEntity, "Insert DB Error")
-			fmt.Println(" err ", err)
+	if emailExists {
+		sqlStmt := `SELECT d.domain_name FROM domains as d 
+						JOIN compromised_emails as ce
+						ON d.email_id = ce.email_id
+						WHERE ce.email = $1`
+		domains := []Domain{}
+		rows, err := Db.Query(sqlStmt, email.Email)
+		if err != nil {
+			c.JSON(http.StatusUnprocessableEntity, "Prepare Query Error")
 			return
 		}
+
+		for rows.Next() {
+			s := Domain{}
+			if err := rows.Scan(&s.DomainName); err != nil {
+				c.JSON(http.StatusUnprocessableEntity, "Prepare Query Error")
+				return
+			}
+			domains = append(domains, s)
+		}
+
+		j, err := json.Marshal(domains)
+		if err != nil {
+			c.JSON(http.StatusUnprocessableEntity, "Converted Json Error")
+			return
+		}
+
+		// * Set into Cache
+		err = myCache.Set(email.Email, domains, 30*time.Minute)
+		if err != nil {
+			c.JSON(http.StatusUnprocessableEntity, "Set Result Cache Error")
+			return
+		}
+
+		c.JSON(http.StatusCreated, string(j))
+	} else {
+		var email_id int
+
+		stmt, err := Db.Prepare("INSERT INTO compromised_emails(email, date_added, user_id) VALUES ($1,$2,$3) RETURNING email_id")
+		if err != nil {
+			c.JSON(http.StatusUnprocessableEntity, "Prepare Query Error")
+			return
+		}
+		err = stmt.QueryRow(email.Email, time.Now(), userId).Scan(&email_id)
+		if err != nil {
+			c.JSON(http.StatusUnprocessableEntity, "Run Query Error")
+			return
+		}
+
+		url := "https://haveibeenpwned.com/api/v3/breachedaccount/" + email.Email
+		reqest, err := http.NewRequest("GET", url, nil)
+		reqest.Header.Add("hibp-api-key", "61e71327fca3400ab0fe3670806828f3")
+
+		if err != nil {
+			panic(err)
+		}
+
+		resp, err := http.DefaultClient.Do(reqest)
+
+		content, err := ioutil.ReadAll(resp.Body)
+		respBody := string(content)
+
+		b := []byte(respBody)
+		var ms = []*Domain{}
+
+		err = json.Unmarshal(b, &ms)
+		if err != nil {
+			panic(err)
+		}
+
+		//* Insert into DB
+		valueStrings := make([]string, 0, len(ms))
+		valueArgs := make([]interface{}, 0, len(ms) * 2)
+		i := 0
+		for _, row := range ms {
+			valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d)", i*2+1, i*2+2))
+			valueArgs = append(valueArgs, row.DomainName)
+			valueArgs = append(valueArgs, email_id)
+			i++
+		}
+
+		stm := fmt.Sprintf("INSERT INTO domains (domain_name, email_id) VALUES %s", strings.Join(valueStrings, ","))
+
+		_, err1 := Db.Exec(stm, valueArgs...)
+		if err1 != nil {
+			c.JSON(http.StatusUnprocessableEntity, "Insert Many into DB Error")
+			return
+		}
+
+		// * Set into Cache
+		err = myCache.Set(email.Email, &ms, 30*time.Minute)
+		if err != nil {
+			c.JSON(http.StatusUnprocessableEntity, "Set Result Cache Error")
+			return
+		}
+		c.JSON(http.StatusCreated, respBody)
+	}
+}
+
+func EmailExists(email string) bool {
+	sqlStmt := `SELECT d.domain_name FROM domains as d 
+				JOIN compromised_emails as ce
+				ON d.email_id = ce.email_id
+				WHERE ce.email = $1`
+	err := Db.QueryRow(sqlStmt, email).Scan(&email)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			fmt.Println("err ", err)
+		}
+
+		return false
 	}
 
-	c.JSON(http.StatusCreated, respBody)
+	return true
 }

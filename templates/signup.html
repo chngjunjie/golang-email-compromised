@@ -73,7 +73,6 @@
                     contentType: "application/json",
                     data: '{"username": "' + username + '", "password" : "' + password + '", "email" : "' + email +'"}',
                     success: function(data){
-                        console.log("Data ", data);
                         window.location.href = "/login";
                     },
                     error: function(errMsg) {

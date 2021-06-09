@@ -29,7 +29,7 @@
         <input type="text" id="email" class="fadeIn second" name="email" placeholder="email address" required>
         <div id="result_table">
         </div>
-        <input id="submit" class="fadeIn fourth" value="Log In">
+        <input id="submit" class="fadeIn fourth" value="Check">
       </form>
 
 
@@ -75,10 +75,10 @@
                         "Authorization": "Bearer " + tokens
                     },
                 success: function(data){
-                    console.log("Data ", data);
                     if (data)
                     {
                         data = jQuery.parseJSON(data);
+
                         if (data.length > 0)
                         {
                             let table_data = "<table id='data'> \

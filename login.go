@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	// "encoding/binary"
 )
 
 var user = User{
@@ -42,7 +43,6 @@ func Login(c *gin.Context) {
 	}
 
 	var err error
-	fmt.Println("u.Username ", u.Username)
 
 	// Get the existing entry present in the database for the given username
 	result := Db.QueryRow("select user_id, password from accounts where username=$1", u.Username)
@@ -51,8 +51,6 @@ func Login(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, "Invalid Username Or Password")
 		return
 	}
-
-	fmt.Println("result ", result)
 
 	// We create another instance of `Credentials` to store the credentials we get from the database
 	storedUsers := &User{}
@@ -65,8 +63,6 @@ func Login(c *gin.Context) {
 			return
 		}
 
-		fmt.Println("err ", err)
-
 		// If the error is of any other type, send a 500 status
 		c.JSON(http.StatusInternalServerError, "Server Error")
 		return
@@ -77,7 +73,6 @@ func Login(c *gin.Context) {
 		// If the two passwords don't match, return a 401 status
 		c.JSON(http.StatusUnauthorized, "Invalid Username Or Password")
 	}
-	fmt.Println("user.ID ", storedUsers.ID)
 
 	ts, err := CreateToken(storedUsers.ID)
 	if err != nil {
@@ -140,12 +135,12 @@ func CreateAuth(userId uint64, td *TokenDetails) error {
 	rt := time.Unix(td.RtExpires, 0)
 	now := time.Now()
 
-	errAccess := client.Set(ctx, td.AccessUuid, strconv.Itoa(int(userId)), at.Sub(now)).Err()
+	errAccess := myCache.Set(td.AccessUuid, strconv.Itoa(int(userId)), at.Sub(now))
 	if errAccess != nil {
 		return errAccess
 	}
 
-	errRefresh := client.Set(ctx, td.RefreshUuid, strconv.Itoa(int(userId)), rt.Sub(now)).Err()
+	errRefresh := myCache.Set(td.RefreshUuid, strconv.Itoa(int(userId)), rt.Sub(now))
 	if errRefresh != nil {
 		return errRefresh
 	}
@@ -172,7 +167,6 @@ func ExtractToken(r *http.Request) string {
 
 func VerifyToken(r *http.Request) (*jwt.Token, error) {
 	tokenString := ExtractToken(r)
-	fmt.Println("tokenString ", tokenString)
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -207,7 +201,6 @@ func ExtractTokenMetadata(r *http.Request) (*AccessDetails, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("token : ", token)
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if ok && token.Valid {
@@ -232,17 +225,17 @@ func ExtractTokenMetadata(r *http.Request) (*AccessDetails, error) {
 }
 
 func FetchAuth(authD *AccessDetails) (uint64, error) {
-	userid, err := client.Get(ctx, authD.AccessUuid).Result()
+	userid, err := myCache.Get(authD.AccessUuid)
 	if err != nil {
 		return 0, err
 	}
+	userId, _ := strconv.ParseUint(strings.Trim(string(userid), "\""), 10, 64)
 
-	userId, _ := strconv.ParseUint(userid, 10, 64)
 	return userId, nil
 }
 
 func DeleteAuth(givenUuid string) (int64, error) {
-	deleted, err := client.Del(ctx, givenUuid).Result()
+	deleted, err := myCache.Del(givenUuid)
 	if err != nil {
 		return 0, err
 	}
@@ -257,7 +250,6 @@ func Refresh(c *gin.Context) {
 	}
 
 	refreshToken := mapToken["refresh_token"]
-	fmt.Println("refreshToken ", refreshToken)
 
 	os.Setenv("REFRESH_SECRET", "640OpbhZFnlYEVTsWo_SErUzkcDyRUqFVzIdHN4ZY4gUQHFAsQzi1ZZNI1TK5KVI8uBZ7Y2")
 	token, err := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
@@ -267,8 +259,6 @@ func Refresh(c *gin.Context) {
 
 		return []byte(os.Getenv("REFRESH_SECRET")), nil
 	})
-	fmt.Println("token ", token)
-	fmt.Println("err ", err)
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, "Refresh token expired")
