@@ -1,7 +1,7 @@
 CREATE TABLE compromised_emails (
 	email_id serial PRIMARY KEY,
 	email VARCHAR(100),
-	date_added timestamp default NULL
+	date_added timestamp default NULL,
 	user_id INT,
 	CONSTRAINT user_check_email
       FOREIGN KEY(user_id) 

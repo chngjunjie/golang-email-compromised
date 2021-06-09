@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>The bird encyclopedia</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <link href="/static/index.css" rel="stylesheet">
+  <link href="/static/table.css" rel="stylesheet">
+</head>
+
+<body>
+   <h1></h1>
+
+  <!--
+    This section of the document specifies the table that will
+    be used to display the list of birds and their description
+   -->
+
+  <!--
+    This section contains the form, that will be used to hit the
+    `POST /bird` API that we will build in the next section
+   -->
+   <div class="wrapper fadeInDown">
+    <div id="formContent">
+      <!-- Tabs Titles -->
+      <h2 class="active"> Home </h2>
+      <!-- <h2 class="inactive underlineHover">Sign Up </h2> -->
+      <form>
+        <input type="text" id="email" class="fadeIn second" name="email" placeholder="email address" required>
+        <div id="result_table">
+        </div>
+        <input id="submit" class="fadeIn fourth" value="Check">
+      </form>
+
+
+      <!-- Remind Passowrd -->
+      <div id="formFooter">
+        <div class="underlineHover message" href="#"></div>
+      </div>
+  
+    </div>
+  </div>
+
+  <!--
+    Finally, the last section is the script that will
+    run on each page load to fetch the list of birds
+    and add them to our existing table
+   -->
+  <script>
+    $( document ).ready(function() {
+
+        function isEmail(email) {
+            var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,6})+$/;
+            return regex.test(email);
+        }
+
+        let tokens = localStorage.getItem("allen_chng_email_compromised_tokens");
+
+        if (tokens == null || typeof (tokens) === 'underfined') {
+            window.location.href = "/login";
+        }
+
+        $("#submit").click(function(){
+            let email = $("#email").val();
+            if (email != '' && isEmail(email)){
+                $(".message").html("")
+
+                $.ajax({
+                type: "POST",
+                url: "/check",
+                contentType: "application/json",
+                data: '{"email": "' + email + '"}',
+                headers: {
+                        "Authorization": "Bearer " + tokens
+                    },
+                success: function(data){
+                    if (data)
+                    {
+                        data = jQuery.parseJSON(data);
+
+                        if (data.length > 0)
+                        {
+                            let table_data = "<table id='data'> \
+                                                <tr>\
+                                                    <th>Domain</th>\
+                                                </tr>";
+                            for (let i = 0; i < data.length; i++) {
+                                console.log(data[i]['Name']);
+                                table_data += "<tr>\
+                                                <td>" + data[i]['Name'] +"</td>\
+                                            </tr>"
+                            }
+                            table_data+="</table>"
+                            $("#result_table").html(table_data);
+                        }
+                    }      
+                    else
+                    {
+                        $("#result_table").html(
+                            "<table><div>No data found.</div></table>"
+                        )
+                    }
+                },
+                error: function(errMsg) {
+                    console.log("Error ", errMsg);
+                    if ('responseJSON' in errMsg)
+                    {
+                        console.log("Error ", errMsg['responseJSON']);
+                    }
+
+                    if (errMsg.status == 401)
+                    {
+                        window.location.href = "/login";
+                    }
+                }
+                });
+            }
+            else 
+            {
+                $(".message").html("Invalid Email Format.")
+            }
+        });
+    });
+  </script>
+</body>

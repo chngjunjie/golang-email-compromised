@@ -55,7 +55,6 @@
         }
 
         let tokens = localStorage.getItem("allen_chng_email_compromised_tokens");
-        console.log(tokens);
 
         if (tokens == null || typeof (tokens) === 'underfined') {
             window.location.href = "/login";
@@ -86,7 +85,6 @@
                                                     <th>Domain</th>\
                                                 </tr>";
                             for (let i = 0; i < data.length; i++) {
-                                console.log(data[i]['Name']);
                                 table_data += "<tr>\
                                                 <td>" + data[i]['Name'] +"</td>\
                                             </tr>"

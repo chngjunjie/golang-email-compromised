@@ -68,7 +68,7 @@ func (r *RedisCache) Del(key string) (int64, error) {
 func initCache() {
 	myCache = &RedisCache{
 		client: redis.NewClient(&redis.Options{
-			Addr:     "localhost:6379",
+			Addr:     "192.168.99.100:6379",
 			Password: "", // no password set
 			DB:       0,  // use default DB
 		}),
@@ -76,12 +76,21 @@ func initCache() {
 }
 
 const (
-	host     = "localhost"
+	host     = "192.168.99.100"
 	port     = 5432
 	dbUser   = "postgres"
 	password = "admin"
 	dbname   = "users_cyber"
 )
+
+const (
+	lchost     = "localhost"
+	lcport     = 5432
+	lcdbUser   = "postgres"
+	lcpassword = "admin"
+	lcdbname   = "users_cyber"
+)
+
 
 var (
 	Db *sql.DB
@@ -94,11 +103,19 @@ var (
 
 func initDB() {
 	var err error
+	url := fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable",
+			dbUser,
+			password,
+			host,
+			port,
+			dbname)
 
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-		"password=%s dbname=%s sslmode=disable",
-		host, port, dbUser, password, dbname)
-	Db, err = sql.Open("postgres", psqlInfo)
+	// psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
+	// 	"password=%s dbname=%s sslmode=disable",
+	// 	lchost, lcport, lcdbUser, lcpassword, lcdbname)
+	// fmt.Println("psqlInfo : ", psqlInfo)
+
+	Db, err = sql.Open("postgres", url)
 
 	if err != nil {
 		panic(err)
