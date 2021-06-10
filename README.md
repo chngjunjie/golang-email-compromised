@@ -1,8 +1,57 @@
-# golang-email-compromised
+# FullStack Golang Applications
+A learning and experience application, Golang Email Compromised is a Application build with following technology :
+- [Redis](https://redis.io/)
+- [Postgres](https://www.postgresql.org/)
+- [Golang](https://golang.org/)
+- [Docker](https://www.docker.com/)
+- [Nginx](https://www.nginx.com/)
+- [JWT Token ](https://jwt.io/)
+- HTML/CSS/Jquery
 
+## Installation
+- Install Postgres, Redis, Golang, Nginx in your local.
+- Install docker-compose together with Docker.
+- After setup up all the prerequisite tools, you might need to change .env point to your one.
+- After installed you might need to change docker-compose.yaml all the volumn path to your installed tools path.
+- If using MacOS, you have to setup your environment for docker.
+- Run following commands 
+```bash
+docker-compose build & docker-compose up
+```
+
+## Usage
+```bash
 redis-server /usr/local/etc/redis.conf
+```
 
-61e71327fca3400ab0fe3670806828f3
-Logo
+## Project Structure
+``` Project Strucutre
+├── demo_picture          # All the demo picture
+├── nginx                 
+│   ├── static            # All the static file (CSS)
+│   ├── templates         # All the html file (HTML)
+│   ├── Dockerfile        # Dockerfile config for nginx
+│   ├── mime.types        # all the file type providefor nginx
+│   └── nginx.conf        # nginx config
+├── script                # All the SQL script
+├── .dockerignore         
+├── .env                  
+├── docker-compose.yml
+├── Dockerfile
+├── go.mod
+├── go.sum
+├── login.go              # All the login and credential logic
+├── main.go               # main file init DB and cache and all the route path
+├── models.go             # struct will be here
+├── README.md
+└── todo.go               # all the route logic is here
+```
 
+# Demo Screen
+![alt text](./demo_picture/login_screen.png "Title")
+![alt text](./demo_picture/signup_screen.png "Title")
+![alt text](./demo_picture/invalid_screen.png "Title")
 ![alt text](./demo_picture/home_screen.png "Title")
+![alt text](./demo_picture/data_response_screen.png "Title")
+![alt text](./demo_picture/no_data_found_screen.png "Title")
+
