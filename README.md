@@ -13,7 +13,6 @@ A learning and experience application, Golang Email Compromised is a Application
 - Install Postgres, Redis, Golang, Nginx in your local.
 - Install docker-compose together with Docker.
 - After setup up all the prerequisite tools, you might need to change .env point to your one.
-- After installed you might need to change docker-compose.yaml all the volumn path to your installed tools path.
 - If using MacOS, you have to setup your environment for docker.
 - Run following commands 
 ```bash
