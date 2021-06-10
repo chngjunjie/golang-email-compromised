@@ -11,31 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq" // here
 	"golang.org/x/crypto/bcrypt"
+	"os"
 )
-
-func CreateTodo(c *gin.Context) {
-	var td *Todo
-	if err := c.ShouldBindJSON(&td); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, "invalid json")
-		return
-	}
-
-	tokenAuth, err := ExtractTokenMetadata(c.Request)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, "unauthorized")
-		return
-	}
-
-	userId, err := FetchAuth(tokenAuth)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, "unauthorized")
-		return
-	}
-
-	td.UserID = userId
-
-	c.JSON(http.StatusCreated, td)
-}
 
 func CreateAccount(c *gin.Context) {
 	var u User
@@ -87,6 +64,7 @@ func checkEmail(c *gin.Context) {
 		return
 	}
 
+	// If found on Cache then return
 	if result != nil {
 		c.JSON(http.StatusCreated, string(result))
 		return
@@ -95,6 +73,7 @@ func checkEmail(c *gin.Context) {
 	// Check if that any previous email exists in DB
 	emailExists := EmailExists(email.Email)
 
+	// If Exists Then get from DB 
 	if emailExists {
 		sqlStmt := `SELECT d.domain_name FROM domains as d 
 						JOIN compromised_emails as ce
@@ -131,6 +110,7 @@ func checkEmail(c *gin.Context) {
 
 		c.JSON(http.StatusCreated, string(j))
 	} else {
+		// If din found from DB & Cache Get From API 
 		var email_id int
 
 		stmt, err := Db.Prepare("INSERT INTO compromised_emails(email, date_added, user_id) VALUES ($1,$2,$3) RETURNING email_id")
@@ -146,7 +126,7 @@ func checkEmail(c *gin.Context) {
 
 		url := "https://haveibeenpwned.com/api/v3/breachedaccount/" + email.Email
 		reqest, err := http.NewRequest("GET", url, nil)
-		reqest.Header.Add("hibp-api-key", "61e71327fca3400ab0fe3670806828f3")
+		reqest.Header.Add("hibp-api-key", os.Getenv("PWNED_KEY"))
 
 		if err != nil {
 			panic(err)
@@ -157,6 +137,10 @@ func checkEmail(c *gin.Context) {
 		content, err := ioutil.ReadAll(resp.Body)
 		respBody := string(content)
 
+		if respBody == "" {
+			c.JSON(http.StatusCreated, respBody)
+			return
+		}
 		b := []byte(respBody)
 		var ms = []*Domain{}
 

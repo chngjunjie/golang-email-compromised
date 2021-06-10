@@ -103,7 +103,6 @@ func CreateToken(userid uint64) (*TokenDetails, error) {
 
 	var err error
 
-	os.Setenv("ACCESS_SECRET", "46RJ3xvpN75a5AAIbLEWbPckcVoLWafkH_Z95QlgPDssiY9qWOLC3g5mB0hQ9ywnWl")
 	atClaims := jwt.MapClaims{}
 	atClaims["authorized"] = true
 	atClaims["access_uuid"] = td.AccessUuid
@@ -115,7 +114,6 @@ func CreateToken(userid uint64) (*TokenDetails, error) {
 		return nil, err
 	}
 
-	os.Setenv("REFRESH_SECRET", "640OpbhZFnlYEVTsWo_SErUzkcDyRUqFVzIdHN4ZY4gUQHFAsQzi1ZZNI1TK5KVI8uBZ7Y2")
 	rtClaims := jwt.MapClaims{}
 	rtClaims["refresh_uuid"] = td.RefreshUuid
 	rtClaims["user_id"] = userid
@@ -251,7 +249,6 @@ func Refresh(c *gin.Context) {
 
 	refreshToken := mapToken["refresh_token"]
 
-	os.Setenv("REFRESH_SECRET", "640OpbhZFnlYEVTsWo_SErUzkcDyRUqFVzIdHN4ZY4gUQHFAsQzi1ZZNI1TK5KVI8uBZ7Y2")
 	token, err := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])

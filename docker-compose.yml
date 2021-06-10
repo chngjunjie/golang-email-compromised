@@ -10,22 +10,24 @@ services:
       - api:/usr/src/app/
     depends_on:
       - db    
-      - redis    
+      - redis  
     networks:
       - fullstack
-
 
   db:
     container_name: full_db_postgres
     image: postgres
+    restart: always
     volumes:
       - database_postgres:/usr/local/var/postgres/data
     ports:
-      - "5432:5432"
+      - "${DBPORT}:${DBPORT}"
     environment:
-      - POSTGRES_DB=users_cyber
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=${DBNAME}
+      - POSTGRES_USER=${DBUSER}
+      - POSTGRES_PASSWORD=${DBPASSWORD}
+    networks:
+      - fullstack
 
   redis:
     image: redis
@@ -33,11 +35,25 @@ services:
     ports: ["6379:6379"]
     volumes:
       - ./redis/redis.conf:/usr/local/etc/redis.conf
+    networks:
+      - fullstack
+
+  nginx:
+    build: "./nginx"
+    ports:
+      - "80:80"
+    depends_on:
+      - "app"
+    networks:
+      - fullstack
+    # volumes:
+    #   - ./nginx/nginx.conf:/usr/local/etc/nginx/nginx.conf
 
 volumes:
   api:
   database_postgres:    
-  redis:             
+  redis:      
+  nginx:       
 
 # Networks to be created to facilitate communication between containers
 networks:

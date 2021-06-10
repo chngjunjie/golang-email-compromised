@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
-	// "github.com/go-redis/cache/v8"
     "time"
 	"encoding/json"
-
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq" // here
 	"log"
 	"net/http"
+	"os"
 )
 
 var (
@@ -23,10 +23,6 @@ var (
 var (
 	ctx    = context.Background()
 	myCache CacheItf
-
-	// client *redis.Client
-	// ring *redis.Ring
-	// mycache *cache.Cache
 )
 
 type CacheItf interface {
@@ -68,54 +64,36 @@ func (r *RedisCache) Del(key string) (int64, error) {
 func initCache() {
 	myCache = &RedisCache{
 		client: redis.NewClient(&redis.Options{
-			Addr:     "192.168.99.100:6379",
+			Addr:     os.Getenv("RD_HOST") + ":" + os.Getenv("RD_PORT"),
 			Password: "", // no password set
 			DB:       0,  // use default DB
 		}),
 	}
 }
 
-const (
-	host     = "192.168.99.100"
-	port     = 5432
-	dbUser   = "postgres"
-	password = "admin"
-	dbname   = "users_cyber"
-)
-
-const (
-	lchost     = "localhost"
-	lcport     = 5432
-	lcdbUser   = "postgres"
-	lcpassword = "admin"
-	lcdbname   = "users_cyber"
-)
-
-
+// Databbase Postgres
 var (
 	Db *sql.DB
 )
 
-// type Object struct {
-//     Str string
-//     Num int
-// }
-
 func initDB() {
+
+	// url := fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable",
+	// 		os.Getenv("DBUSER"),
+	// 		os.Getenv("DBPASSWORD"),
+	// 		os.Getenv("DBHOST"),
+	// 		os.Getenv("DBPORT"),
+	// 		os.Getenv("DBNAME"))
+	
+	// Connect for local usage
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s "+
+		"password=%s dbname=%s sslmode=disable",
+		os.Getenv("DBHOST"), os.Getenv("DBPORT"), os.Getenv("DBUSER"), os.Getenv("DBPASSWORD"), os.Getenv("DBNAME"))
+	fmt.Println("psqlInfo : ", psqlInfo)
+
+
 	var err error
-	url := fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable",
-			dbUser,
-			password,
-			host,
-			port,
-			dbname)
-
-	// psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-	// 	"password=%s dbname=%s sslmode=disable",
-	// 	lchost, lcport, lcdbUser, lcpassword, lcdbname)
-	// fmt.Println("psqlInfo : ", psqlInfo)
-
-	Db, err = sql.Open("postgres", url)
+	Db, err = sql.Open("postgres", psqlInfo)
 
 	if err != nil {
 		panic(err)
@@ -127,65 +105,39 @@ func initDB() {
 	}
 
 	fmt.Println("Successfully connected!")
-
-	// sqlStatement := `
-	// 	INSERT INTO accounts (username, password)
-	// 	VALUES ('jon@calhoun1.io', 'Jo1nathan')`
-	// _, err = Db.Exec(sqlStatement)
-	// if err != nil {
-	// 	fmt.Println(" err ", err)
-	// }
 }
 
 func main() {
+
+	err := godotenv.Load(".env")
+
+	if err != nil {
+	  log.Fatalf("Error loading .env file")
+	}
+
 	initDB()
 	initCache()
-
-	// key := "mykey"
-    // obj := &Object{
-    //     Str: "mystring",
-    //     Num: 42,
-    // }
-	// myCache.Set(key, obj, time.Minute)
-
-	// result, err1 := myCache.Get(key)
-	// if err1 != nil {
-	// 	fmt.Println("err1 : ", err1)
-	// }
-	// fmt.Println("result : ", result)
-	// deleted, err1 := myCache.Del(key)
-	// if err1 != nil {
-	// 	fmt.Println("err1 : ", err1)
-	// }
-	// fmt.Println("deleted : ", deleted)
-	// result1, err1 := myCache.Get(key)
-	// if err1 != nil {
-	// 	fmt.Println("err1 : ", err1)
-	// }
-	// fmt.Println("result1 : ", result1)
 	
 	// api
-	router.POST("/login", Login)
-	router.POST("/todo", TokenAuthMiddleware(), CreateTodo)
-	router.POST("/logout", TokenAuthMiddleware(), Logout)
-	router.POST("/token/refresh", Refresh)
-	router.POST("/token/validate", AuthorizedPage)
-	router.POST("/signup", CreateAccount)
-	router.POST("/check", checkEmail)
+	router.POST("/api/login", Login)
+	router.POST("/api/logout", TokenAuthMiddleware(), Logout)
+	router.POST("/api/token/refresh", Refresh)
+	router.POST("/api/token/validate", AuthorizedPage)
+	router.POST("/api/signup", CreateAccount)
+	router.POST("/api/check", checkEmail)
 
 	// html
-	router.LoadHTMLGlob("templates/*")
-	router.Static("/static", "./static")
+	router.LoadHTMLGlob("./nginx/templates/*")
+	router.Static("/static", "./nginx/static")
 
-	//router.LoadHTMLFiles("templates/upload.html")
 	router.GET("/login", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", gin.H{
+		c.HTML(http.StatusOK, "login.html", gin.H{
 			"title": "Main website",
 		})
 	})
 
 	router.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", gin.H{
+		c.HTML(http.StatusOK, "login.html", gin.H{
 			"title": "Main website",
 		})
 	})
