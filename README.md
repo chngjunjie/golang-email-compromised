@@ -8,6 +8,7 @@ A learning and experience application, Golang Email Compromised is a Application
 - [JWT Token ](https://jwt.io/)
 - HTML/CSS/Jquery
 
+
 ## Installation
 - Install Postgres, Redis, Golang, Nginx in your local.
 - Install docker-compose together with Docker.
@@ -19,10 +20,12 @@ A learning and experience application, Golang Email Compromised is a Application
 docker-compose build & docker-compose up
 ```
 
+
 ## Usage
 ```bash
 redis-server /usr/local/etc/redis.conf
 ```
+
 
 ## Project Structure
 ``` Project Strucutre
@@ -46,6 +49,13 @@ redis-server /usr/local/etc/redis.conf
 ├── README.md
 └── todo.go               # all the route logic is here
 ```
+
+
+# Improvement
+- Apply GORM into application. Try to use ORM tools for golang.
+- Project Structure and Code Strucutre can be rearrange into more detail parts.
+- Security Features.
+
 
 # Demo Screen
 ![alt text](./demo_picture/login_screen.png "Title")
